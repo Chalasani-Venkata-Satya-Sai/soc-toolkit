@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  soc-toolkit-dashboard:
+    build: .
+    container_name: soc-toolkit-dashboard
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./reports:/app/reports
+      - ./.cache:/app/.cache
+    command: ["dashboard", "--port", "8501"]
+
+  # Example one-off CLI run:
+  #   docker compose run soc-toolkit-cli enrich 8.8.8.8
+  soc-toolkit-cli:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./reports:/app/reports
+      - ./.cache:/app/.cache
+    entrypoint: ["soc-toolkit"]
+    profiles: ["cli"]

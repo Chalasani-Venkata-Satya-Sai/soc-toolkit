@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SOC Toolkit Report</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --red: #f85149; --orange: #d29922; --green: #3fb950;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 32px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+  header h1 { margin: 0 0 4px 0; font-size: 22px; }
+  header .meta { color: var(--muted); font-size: 13px; }
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .03em;
+  }
+  .badge.malicious, .badge.phishing, .badge.match { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid var(--red); }
+  .badge.suspicious { background: rgba(210,153,34,.15); color: var(--orange); border: 1px solid var(--orange); }
+  .badge.clean, .badge.benign, .badge.likely-benign { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid var(--green); }
+  .badge.unknown, .badge.unrecognized { background: rgba(139,148,158,.15); color: var(--muted); border: 1px solid var(--muted); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 { margin-top: 0; font-size: 15px; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; width: 180px; }
+  ul.reasons { margin: 8px 0 0 0; padding-left: 20px; }
+  ul.reasons li { margin-bottom: 6px; }
+  code { background: #010409; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .score-bar-bg { background: #21262d; border-radius: 6px; height: 10px; overflow: hidden; margin-top: 6px;}
+  .score-bar-fill { height: 100%; background: var(--accent); }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 32px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🛡️ SOC Toolkit &mdash; {{ report_type|capitalize }} Report</h1>
+    <div class="meta">Generated {{ generated_at }}</div>
+  </header>
+
+  {% if report_type == 'enrichment' %}
+    <div class="card">
+      <h2>Indicator</h2>
+      <table>
+        <tr><th>IOC</th><td><code>{{ data.ioc }}</code></td></tr>
+        <tr><th>Type</th><td>{{ data.type }}</td></tr>
+        <tr><th>Verdict</th><td><span class="badge {{ data.verdict|replace(' ', '-') }}">{{ data.verdict }}</span></td></tr>
+        <tr><th>Risk Score</th><td>
+          {{ data.risk_score }}/100
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ data.risk_score }}%"></div></div>
+        </td></tr>
+      </table>
+      {% if data.reasons %}
+      <h2 style="margin-top:20px;">Reasons</h2>
+      <ul class="reasons">{% for r in data.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Source Results</h2>
+      <table>
+        <tr><th>Source</th><th>Status</th><th>Details</th></tr>
+        {% for s in data.sources %}
+        <tr>
+          <td>{{ s.source }}</td>
+          <td>{{ s.status }}</td>
+          <td>
+            {% for k, v in s.items() if k not in ['source', 'status'] %}
+              <div><strong>{{ k }}</strong>: {{ v }}</div>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+  {% elif report_type == 'phishing' %}
+    <div class="card">
+      <h2>Verdict</h2>
+      <table>
+        <tr><th>File</th><td><code>{{ data.file }}</code></td></tr>
+        <tr><th>Verdict</th><td><span class="badge {{ data.verdict|replace(' ', '-') }}">{{ data.verdict }}</span></td></tr>
+        <tr><th>Score</th><td>
+          {{ data.score }}/100
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ data.score }}%"></div></div>
+        </td></tr>
+      </table>
+      {% if data.reasons %}
+      <h2 style="margin-top:20px;">Reasons</h2>
+      <ul class="reasons">{% for r in data.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Headers</h2>
+      <table>
+        {% for k, v in data.headers.items() if k != 'received_chain' %}
+        <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="card">
+      <h2>Extracted IOCs ({{ data.extracted_iocs|length }})</h2>
+      {% if data.extracted_iocs %}
+      <ul class="reasons">{% for ioc in data.extracted_iocs %}<li><code>{{ ioc }}</code></li>{% endfor %}</ul>
+      {% else %}<p>None found.</p>{% endif %}
+    </div>
+    <div class="card">
+      <h2>Attachments ({{ data.attachments|length }})</h2>
+      {% if data.attachments %}
+      <table>
+        <tr><th>Filename</th><th>Type / Size</th><th>SHA256</th></tr>
+        {% for a in data.attachments %}
+        <tr><td>{{ a.filename }}</td><td>{{ a.content_type }} / {{ a.size_bytes }}B</td><td><code>{{ a.sha256 }}</code></td></tr>
+        {% endfor %}
+      </table>
+      {% else %}<p>None found.</p>{% endif %}
+    </div>
+
+  {% elif report_type == 'yara' %}
+    <div class="card">
+      <h2>Scan Summary</h2>
+      <table>
+        <tr><th>Path Scanned</th><td><code>{{ data.scanned_path }}</code></td></tr>
+        <tr><th>Files Scanned</th><td>{{ data.total_files }}</td></tr>
+        <tr><th>Matches Found</th><td>
+          <span class="badge {{ 'match' if data.matches_found else 'clean' }}">
+            {{ data.matches_found }} match(es)
+          </span>
+        </td></tr>
+      </table>
+    </div>
+    {% for r in data.results if r.status == 'match' %}
+    <div class="card">
+      <h2>{{ r.file }}</h2>
+      <table>
+        <tr><th>Rule</th><th>Tags</th><th>Meta</th></tr>
+        {% for m in r.matches %}
+        <tr>
+          <td>{{ m.rule }}</td>
+          <td>{{ m.tags|join(', ') }}</td>
+          <td>{% for k, v in m.meta.items() %}<div><strong>{{ k }}</strong>: {{ v }}</div>{% endfor %}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <footer>Generated by SOC Toolkit &middot; for authorized security operations use only</footer>
+</div>
+</body>
+</html>

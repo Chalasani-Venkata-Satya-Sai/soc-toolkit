@@ -1,0 +1,198 @@
+"""
+SOC Toolkit — Streamlit Dashboard
+==================================
+Run with:  soc-toolkit dashboard
+       or: streamlit run soc_toolkit/dashboard/app.py
+"""
+from __future__ import annotations
+
+import sys
+import tempfile
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
+
+# Allow running this file directly with `streamlit run`
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from soc_toolkit.config import settings  # noqa: E402
+from soc_toolkit.core import enrichment, phishing, report, yara_scan  # noqa: E402
+
+st.set_page_config(page_title="SOC Toolkit", page_icon="🛡️", layout="wide")
+
+VERDICT_COLORS = {
+    "malicious": "🔴", "phishing": "🔴", "match": "🔴",
+    "suspicious": "🟡",
+    "clean": "🟢", "likely benign": "🟢",
+    "unknown": "⚪", "unrecognized": "⚪",
+}
+
+
+def verdict_badge(verdict: str) -> str:
+    return f"{VERDICT_COLORS.get(verdict, '⚪')} **{verdict.upper()}**"
+
+
+with st.sidebar:
+    st.title("🛡️ SOC Toolkit")
+    st.caption("Python automation for SOC / security analysts")
+    page = st.radio("Module", ["IOC Enrichment", "Phishing Triage", "YARA Scan", "About"])
+
+    st.divider()
+    st.subheader("API Key Status")
+    sources = {
+        "VirusTotal": bool(settings.vt_api_key),
+        "AbuseIPDB": bool(settings.abuseipdb_api_key),
+        "Shodan": bool(settings.shodan_api_key),
+    }
+    for name, ok in sources.items():
+        st.write(f"{'✅' if ok else '⬜'} {name}")
+    if not any(sources.values()):
+        st.warning("No API keys configured. Add them to `.env` (see `.env.example`).")
+
+
+# ---------------------------------------------------------------------------
+# IOC Enrichment
+# ---------------------------------------------------------------------------
+if page == "IOC Enrichment":
+    st.header("🔍 IOC Enrichment")
+    st.caption("Look up IPs, domains, URLs, or file hashes across multiple threat-intel sources at once.")
+
+    raw_input = st.text_area(
+        "Enter one or more indicators (one per line)",
+        placeholder="8.8.8.8\nexample.com\n44d88612fea8a8f36de82e1278abb02f",
+        height=120,
+    )
+
+    if st.button("Enrich Indicators", type="primary") and raw_input.strip():
+        iocs = [line.strip() for line in raw_input.splitlines() if line.strip()]
+        with st.spinner(f"Querying threat-intel sources for {len(iocs)} indicator(s)..."):
+            results = enrichment.enrich_bulk(iocs)
+
+        st.session_state["last_enrichment"] = results
+
+        summary_rows = [
+            {"IOC": r["ioc"], "Type": r["type"], "Verdict": r["verdict"], "Risk Score": r["risk_score"]}
+            for r in results
+        ]
+        st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+
+        for r in results:
+            with st.expander(f"{verdict_badge(r['verdict'])} — {r['ioc']}"):
+                st.write(f"**Type:** {r['type']}  |  **Risk score:** {r['risk_score']}/100")
+                if r["reasons"]:
+                    st.write("**Reasons:**")
+                    for reason in r["reasons"]:
+                        st.write(f"- {reason}")
+                for s in r["sources"]:
+                    st.json(s)
+
+        if st.button("💾 Save HTML Report"):
+            for r in results:
+                path = report.generate_report(r, "enrichment", fmt="html")
+                st.success(f"Saved: {path}")
+
+
+# ---------------------------------------------------------------------------
+# Phishing Triage
+# ---------------------------------------------------------------------------
+elif page == "Phishing Triage":
+    st.header("📧 Phishing Email Triage")
+    st.caption("Upload a raw .eml file to extract headers, IOCs, and get an automated verdict.")
+
+    uploaded = st.file_uploader("Upload .eml file", type=["eml"])
+    enrich_toggle = st.checkbox("Also enrich extracted IOCs with threat intel", value=False)
+
+    if uploaded and st.button("Run Triage", type="primary"):
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".eml") as tmp:
+            tmp.write(uploaded.read())
+            tmp_path = tmp.name
+
+        with st.spinner("Parsing and scoring email..."):
+            result = phishing.triage_email(tmp_path)
+            if enrich_toggle and result["extracted_iocs"]:
+                result["ioc_enrichment"] = enrichment.enrich_bulk(result["extracted_iocs"])
+
+        st.session_state["last_phishing"] = result
+
+        col1, col2 = st.columns(2)
+        col1.metric("Verdict", result["verdict"].upper())
+        col2.metric("Score", f"{result['score']}/100")
+
+        st.subheader("Headers")
+        st.json(result["headers"])
+
+        st.subheader(f"Extracted IOCs ({len(result['extracted_iocs'])})")
+        st.write(result["extracted_iocs"] or "None found.")
+
+        st.subheader(f"Attachments ({len(result['attachments'])})")
+        if result["attachments"]:
+            st.dataframe(pd.DataFrame(result["attachments"]), use_container_width=True)
+        else:
+            st.write("None found.")
+
+        st.subheader("Reasons")
+        for r in result["reasons"]:
+            st.write(f"- {r}")
+
+        if st.button("💾 Save HTML Report"):
+            path = report.generate_report(result, "phishing", fmt="html")
+            st.success(f"Saved: {path}")
+
+
+# ---------------------------------------------------------------------------
+# YARA Scan
+# ---------------------------------------------------------------------------
+elif page == "YARA Scan":
+    st.header("🧬 YARA Malware Scan")
+    st.caption("Scan an uploaded file against the bundled (or custom) YARA rule set.")
+
+    uploaded = st.file_uploader("Upload a file to scan", type=None)
+
+    if uploaded and st.button("Scan File", type="primary"):
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(uploaded.read())
+            tmp_path = tmp.name
+
+        with st.spinner("Compiling rules and scanning..."):
+            result = yara_scan.scan(tmp_path)
+
+        match_found = result["matches_found"] > 0
+        st.metric("Matches Found", result["matches_found"])
+
+        for r in result["results"]:
+            if r["status"] == "match":
+                st.error(f"MATCH: {uploaded.name}")
+                for m in r["matches"]:
+                    st.write(f"**Rule:** {m['rule']}  |  **Tags:** {', '.join(m['tags'])}")
+                    st.json(m["meta"])
+            elif r["status"] == "clean":
+                st.success(f"No matches: {uploaded.name}")
+            else:
+                st.warning(f"{r['status']}: {r.get('reason', '')}")
+
+        if st.button("💾 Save HTML Report"):
+            path = report.generate_report(result, "yara", fmt="html")
+            st.success(f"Saved: {path}")
+
+
+# ---------------------------------------------------------------------------
+# About
+# ---------------------------------------------------------------------------
+else:
+    st.header("About SOC Toolkit")
+    st.markdown(
+        """
+        **SOC Toolkit** is an all-in-one Python automation platform for
+        SOC / security analysts, combining:
+
+        - 🔍 **IOC Enrichment** — VirusTotal, AbuseIPDB, and Shodan lookups with a rolled-up risk verdict
+        - 📧 **Phishing Triage** — header-spoofing detection, IOC extraction, and attachment hashing from raw `.eml` files
+        - 🧬 **YARA Scanning** — file/endpoint malware pattern matching
+        - 📄 **Reporting** — JSON and styled HTML reports ready for tickets or SIEM ingestion
+
+        Available both as a **CLI** (`soc-toolkit --help`) and this dashboard.
+
+        See the project `README.md` for full setup and API key configuration.
+        """
+    )
