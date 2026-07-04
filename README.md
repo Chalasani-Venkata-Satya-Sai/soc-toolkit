@@ -3,7 +3,7 @@
 **An all-in-one Python automation toolkit for SOC / security analysts.**
 IOC enrichment, phishing triage, and YARA-based malware scanning — as a CLI *and* a web dashboard, with JSON/HTML reporting out of the box.
 
-[![CI](https://github.com/YOUR_USERNAME/soc-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/soc-toolkit/actions/workflows/ci.yml)
+[![CI](https://github.com/Chalasani-Venkata-Satya-Sai/soc-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Chalasani-Venkata-Satya-Sai/soc-toolkit/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
