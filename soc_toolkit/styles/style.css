@@ -1,1 +1,51 @@
+/* ---------- GLOBAL ---------- */
 
+.stApp{
+    background:#090C1A;
+    color:white;
+}
+
+/* Sidebar */
+
+section[data-testid="stSidebar"]{
+    background:#101728;
+    border-right:1px solid #232B45;
+}
+
+/* Headers */
+
+h1,h2,h3{
+    color:white;
+}
+
+/* Buttons */
+
+.stButton>button{
+    background:linear-gradient(90deg,#7B2FF7,#F107A3);
+    color:white;
+    border:none;
+    border-radius:12px;
+    padding:0.7rem 1.4rem;
+    font-weight:600;
+}
+
+.stButton>button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 18px rgba(180,70,255,.6);
+}
+
+/* Text Area */
+
+textarea{
+    background:#111827 !important;
+    color:white !important;
+    border-radius:12px !important;
+}
+
+/* Cards */
+
+div[data-testid="metric-container"]{
+    background:#131C2E;
+    border-radius:15px;
+    padding:15px;
+}
