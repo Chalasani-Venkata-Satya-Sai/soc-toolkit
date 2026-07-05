@@ -3,14 +3,14 @@
 ================================= */
 
 .stApp {
-    background: #ebf9ea;
+    background: #0f5c5c;
     color: #39FF14;
 }
 
 /* Sidebar */
 
 section[data-testid="stSidebar"]{
-    background:#ebf9ea;
+    background:#0f5c5c;
     border-right:1px solid #1B2336;
 }
 
@@ -43,7 +43,7 @@ a{
 
 textarea,
 input{
-    background:#ebf9ea !important;
+    background:#0f5c5c !important;
     color:#39FF14 !important;
     border:1px solid #39FF14 !important;
     border-radius:12px !important;
