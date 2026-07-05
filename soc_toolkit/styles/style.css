@@ -1,51 +1,146 @@
-/* ---------- GLOBAL ---------- */
+/* ===============================
+   SOC Toolkit - Matrix Theme
+================================= */
 
-.stApp{
-    background:#090C1A;
-    color:white;
+.stApp {
+    background: #050816;
+    color: #39FF14;
 }
 
 /* Sidebar */
 
 section[data-testid="stSidebar"]{
-    background:#101728;
-    border-right:1px solid #232B45;
+    background:#0B1120;
+    border-right:1px solid #1B2336;
+}
+
+/* All text */
+
+html,
+body,
+p,
+span,
+label,
+small,
+div,
+li{
+    color:#39FF14 !important;
 }
 
 /* Headers */
 
-h1,h2,h3{
-    color:white;
+h1,h2,h3,h4,h5,h6{
+    color:#39FF14 !important;
+    text-shadow:0 0 10px #39FF14;
+}
+
+/* Links */
+
+a{
+    color:#00FF7F !important;
+}
+
+/* Text input */
+
+textarea,
+input{
+    background:#0B1222 !important;
+    color:#39FF14 !important;
+    border:1px solid #39FF14 !important;
+    border-radius:12px !important;
+}
+
+/* Placeholder */
+
+textarea::placeholder{
+    color:#4ADE80 !important;
 }
 
 /* Buttons */
 
 .stButton>button{
-    background:linear-gradient(90deg,#7B2FF7,#F107A3);
-    color:white;
+
+    background:linear-gradient(
+        90deg,
+        #00A651,
+        #39FF14
+    );
+
+    color:black !important;
+
     border:none;
+
     border-radius:12px;
-    padding:0.7rem 1.4rem;
-    font-weight:600;
+
+    font-weight:700;
+
+    transition:0.3s;
 }
 
 .stButton>button:hover{
+
+    box-shadow:0 0 25px #39FF14;
+
     transform:translateY(-2px);
-    box-shadow:0 0 18px rgba(180,70,255,.6);
+
 }
 
-/* Text Area */
-
-textarea{
-    background:#111827 !important;
-    color:white !important;
-    border-radius:12px !important;
-}
-
-/* Cards */
+/* Metric cards */
 
 div[data-testid="metric-container"]{
-    background:#131C2E;
-    border-radius:15px;
-    padding:15px;
+
+    background:#0F172A;
+
+    border:1px solid #39FF14;
+
+    border-radius:16px;
+
+    box-shadow:0 0 15px rgba(57,255,20,.15);
+
+}
+
+/* Expander */
+
+.streamlit-expanderHeader{
+
+    color:#39FF14 !important;
+
+}
+
+/* Tables */
+
+thead{
+
+    color:#39FF14;
+
+}
+
+tbody{
+
+    color:#39FF14;
+
+}
+
+/* Success */
+
+.stSuccess{
+
+    border-left:5px solid #39FF14;
+
+}
+
+/* Warning */
+
+.stWarning{
+
+    border-left:5px solid orange;
+
+}
+
+/* Error */
+
+.stError{
+
+    border-left:5px solid red;
+
 }
