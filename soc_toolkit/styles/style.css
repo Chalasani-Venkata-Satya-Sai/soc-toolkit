@@ -3,14 +3,14 @@
 ================================= */
 
 .stApp {
-    background: #0f5c5c;
-    color: #39FF14;
+    background: #40E0D0;
+    color: #40E0D0;
 }
 
 /* Sidebar */
 
 section[data-testid="stSidebar"]{
-    background:#0f5c5c;
+    background:#40E0D0;
     border-right:1px solid #1B2336;
 }
 
@@ -43,7 +43,7 @@ a{
 
 textarea,
 input{
-    background:#0f5c5c !important;
+    background:#40E0D0 !important;
     color:#241426 !important;
     border:1px solid #39FF14 !important;
     border-radius:12px !important;
@@ -88,7 +88,7 @@ textarea::placeholder{
 
 div[data-testid="metric-container"]{
 
-    background:#0F172A;
+    background:#40E0D0;
 
     border:1px solid #39FF14;
 
