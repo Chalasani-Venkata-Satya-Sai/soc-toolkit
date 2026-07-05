@@ -1,220 +1,175 @@
 """
-SOC Toolkit — Streamlit Dashboard
-==================================
-Run with:  soc-toolkit dashboard
-       or: streamlit run soc_toolkit/dashboard/app.py
+SOC Toolkit CLI
+===============
+Usage:
+    soc-toolkit enrich <ioc> [<ioc> ...]
+    soc-toolkit phishing <path/to/email.eml>
+    soc-toolkit yara-scan <path/to/file-or-dir> [--rules <path>]
+    soc-toolkit dashboard
 """
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
-import pandas as pd
-import streamlit as st
+import click
+from rich.console import Console
+from rich.table import Table
 
-# Allow running this file directly with `streamlit run`
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from soc_toolkit.core import enrichment, phishing, report, yara_scan
 
-from soc_toolkit.config import settings  # noqa: E402
-from soc_toolkit.core import enrichment, phishing, report, yara_scan  # noqa: E402
-
-st.set_page_config(page_title="SOC Toolkit", page_icon="🛡️", layout="wide")
-
-# -----------------------------
-# Load custom CSS
-# -----------------------------
-
-CSS_DIR = Path(__file__).resolve().parents[1] / "styles"
-CSS_FILE = CSS_DIR / "style.css"
-# Some repos ship the CSS as `style.css.txt` (e.g., for GitHub/viewer friendliness)
-if not CSS_FILE.exists():
-    CSS_FILE = CSS_DIR / "style.css.txt"
+console = Console()
 
 
-if CSS_FILE.exists():
-    with open(CSS_FILE, "r", encoding="utf-8") as f:
-        st.markdown(
-            f"<style>{f.read()}</style>",
-            unsafe_allow_html=True,
-        )
-
-
-
-
-VERDICT_COLORS = {
-
-    "malicious": "🔴", "phishing": "🔴", "match": "🔴",
-    "suspicious": "🟡",
-    "clean": "🟢", "likely benign": "🟢",
-    "unknown": "⚪", "unrecognized": "⚪",
-}
-
-
-def verdict_badge(verdict: str) -> str:
-    return f"{VERDICT_COLORS.get(verdict, '⚪')} **{verdict.upper()}**"
-
-
-with st.sidebar:
-    st.title("🛡️ SOC Toolkit")
-    st.caption("Python automation for SOC / security analysts")
-    page = st.radio("Module", ["IOC Enrichment", "Phishing Triage", "YARA Scan", "About"])
-
-    st.divider()
-    st.subheader("API Key Status")
-    sources = {
-        "VirusTotal": bool(settings.vt_api_key),
-        "AbuseIPDB": bool(settings.abuseipdb_api_key),
-        "Shodan": bool(settings.shodan_api_key),
-    }
-    for name, ok in sources.items():
-        st.write(f"{'✅' if ok else '⬜'} {name}")
-    if not any(sources.values()):
-        st.warning("No API keys configured. Add them to `.env` (see `.env.example`).")
+@click.group()
+@click.version_option()
+def cli():
+    """SOC Toolkit — an all-in-one Python automation toolkit for SOC/security analysts."""
+    pass
 
 
 # ---------------------------------------------------------------------------
-# IOC Enrichment
+# enrich
 # ---------------------------------------------------------------------------
-if page == "IOC Enrichment":
-    st.header("🔍 IOC Enrichment")
-    st.caption("Look up IPs, domains, URLs, or file hashes across multiple threat-intel sources at once.")
 
-    raw_input = st.text_area(
-        "Enter one or more indicators (one per line)",
-        placeholder="8.8.8.8\nexample.com\n44d88612fea8a8f36de82e1278abb02f",
-        height=120,
-    )
+@cli.command()
+@click.argument("iocs", nargs=-1, required=True)
+@click.option("--format", "fmt", type=click.Choice(["table", "json", "html"]), default="table")
+@click.option("--save", is_flag=True, help="Also write a report file to ./reports/")
+def enrich(iocs, fmt, save):
+    """Enrich one or more IOCs (IP, domain, URL, or hash) across threat-intel sources."""
+    results = enrichment.enrich_bulk(list(iocs))
 
-    if st.button("Enrich Indicators", type="primary") and raw_input.strip():
-        iocs = [line.strip() for line in raw_input.splitlines() if line.strip()]
-        with st.spinner(f"Querying threat-intel sources for {len(iocs)} indicator(s)..."):
-            results = enrichment.enrich_bulk(iocs)
-
-        st.session_state["last_enrichment"] = results
-
-        summary_rows = [
-            {"IOC": r["ioc"], "Type": r["type"], "Verdict": r["verdict"], "Risk Score": r["risk_score"]}
-            for r in results
-        ]
-        st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
-
+    if fmt == "json":
+        click.echo(json.dumps(results, indent=2, default=str))
+    elif fmt == "html":
         for r in results:
-            with st.expander(f"{verdict_badge(r['verdict'])} — {r['ioc']}"):
-                st.write(f"**Type:** {r['type']}  |  **Risk score:** {r['risk_score']}/100")
-                if r["reasons"]:
-                    st.write("**Reasons:**")
-                    for reason in r["reasons"]:
-                        st.write(f"- {reason}")
-                for s in r["sources"]:
-                    st.json(s)
+            path = report.generate_report(r, "enrichment", fmt="html")
+            console.print(f"[green]HTML report saved:[/green] {path}")
+    else:
+        table = Table(title="IOC Enrichment Results")
+        table.add_column("IOC")
+        table.add_column("Type")
+        table.add_column("Verdict")
+        table.add_column("Risk Score")
+        table.add_column("Sources Checked")
+        for r in results:
+            verdict_color = {
+                "malicious": "red", "suspicious": "yellow", "clean": "green",
+            }.get(r["verdict"], "white")
+            table.add_row(
+                r["ioc"], r["type"],
+                f"[{verdict_color}]{r['verdict']}[/{verdict_color}]",
+                str(r["risk_score"]),
+                ", ".join(s["source"] for s in r["sources"]) or "-",
+            )
 
-        if st.button("💾 Save HTML Report"):
-            for r in results:
-                path = report.generate_report(r, "enrichment", fmt="html")
-                st.success(f"Saved: {path}")
+        console.print(table)
+
+    if save and fmt != "html":
+        for r in results:
+            path = report.generate_report(r, "enrichment", fmt="both")
+            console.print(f"[dim]Saved report(s) for {r['ioc']}: {path}[/dim]")
 
 
 # ---------------------------------------------------------------------------
-# Phishing Triage
+# phishing
 # ---------------------------------------------------------------------------
-elif page == "Phishing Triage":
-    st.header("📧 Phishing Email Triage")
-    st.caption("Upload a raw .eml file to extract headers, IOCs, and get an automated verdict.")
 
-    uploaded = st.file_uploader("Upload .eml file", type=["eml"])
-    enrich_toggle = st.checkbox("Also enrich extracted IOCs with threat intel", value=False)
+@cli.command(name="phishing")
+@click.argument("eml_path", type=click.Path(exists=True))
+@click.option("--enrich-iocs", is_flag=True, help="Also run enrichment on extracted IOCs")
+@click.option("--format", "fmt", type=click.Choice(["summary", "json", "html"]), default="summary")
+def phishing_cmd(eml_path, enrich_iocs, fmt):
+    """Triage a raw .eml phishing submission."""
+    result = phishing.triage_email(eml_path)
 
-    if uploaded and st.button("Run Triage", type="primary"):
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".eml") as tmp:
-            tmp.write(uploaded.read())
-            tmp_path = tmp.name
+    if enrich_iocs and result["extracted_iocs"]:
+        console.print(f"[dim]Enriching {len(result['extracted_iocs'])} extracted IOC(s)...[/dim]")
+        result["ioc_enrichment"] = enrichment.enrich_bulk(result["extracted_iocs"])
 
-        with st.spinner("Parsing and scoring email..."):
-            result = phishing.triage_email(tmp_path)
-            if enrich_toggle and result["extracted_iocs"]:
-                result["ioc_enrichment"] = enrichment.enrich_bulk(result["extracted_iocs"])
+    if fmt == "json":
+        click.echo(json.dumps(result, indent=2, default=str))
+        return
+    if fmt == "html":
+        path = report.generate_report(result, "phishing", fmt="html")
+        console.print(f"[green]HTML report saved:[/green] {path}")
+        return
 
-        st.session_state["last_phishing"] = result
-
-        col1, col2 = st.columns(2)
-        col1.metric("Verdict", result["verdict"].upper())
-        col2.metric("Score", f"{result['score']}/100")
-
-        st.subheader("Headers")
-        st.json(result["headers"])
-
-        st.subheader(f"Extracted IOCs ({len(result['extracted_iocs'])})")
-        st.write(result["extracted_iocs"] or "None found.")
-
-        st.subheader(f"Attachments ({len(result['attachments'])})")
-        if result["attachments"]:
-            st.dataframe(pd.DataFrame(result["attachments"]), use_container_width=True)
-        else:
-            st.write("None found.")
-
-        st.subheader("Reasons")
+    verdict_color = {"phishing": "red", "suspicious": "yellow", "likely benign": "green"}.get(result["verdict"], "white")
+    console.print(f"\n[bold]File:[/bold] {result['file']}")
+    console.print(f"[bold]Verdict:[/bold] [{verdict_color}]{result['verdict']}[/{verdict_color}]  (score: {result['score']}/100)")
+    console.print(f"[bold]From:[/bold] {result['headers']['from']}")
+    console.print(f"[bold]Subject:[/bold] {result['headers']['subject']}")
+    if result["reasons"]:
+        console.print("\n[bold]Reasons:[/bold]")
         for r in result["reasons"]:
-            st.write(f"- {r}")
-
-        if st.button("💾 Save HTML Report"):
-            path = report.generate_report(result, "phishing", fmt="html")
-            st.success(f"Saved: {path}")
-
-
-# ---------------------------------------------------------------------------
-# YARA Scan
-# ---------------------------------------------------------------------------
-elif page == "YARA Scan":
-    st.header("🧬 YARA Malware Scan")
-    st.caption("Scan an uploaded file against the bundled (or custom) YARA rule set.")
-
-    uploaded = st.file_uploader("Upload a file to scan", type=None)
-
-    if uploaded and st.button("Scan File", type="primary"):
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            tmp.write(uploaded.read())
-            tmp_path = tmp.name
-
-        with st.spinner("Compiling rules and scanning..."):
-            result = yara_scan.scan(tmp_path)
-
-        match_found = result["matches_found"] > 0
-        st.metric("Matches Found", result["matches_found"])
-
-        for r in result["results"]:
-            if r["status"] == "match":
-                st.error(f"MATCH: {uploaded.name}")
-                for m in r["matches"]:
-                    st.write(f"**Rule:** {m['rule']}  |  **Tags:** {', '.join(m['tags'])}")
-                    st.json(m["meta"])
-            elif r["status"] == "clean":
-                st.success(f"No matches: {uploaded.name}")
-            else:
-                st.warning(f"{r['status']}: {r.get('reason', '')}")
-
-        if st.button("💾 Save HTML Report"):
-            path = report.generate_report(result, "yara", fmt="html")
-            st.success(f"Saved: {path}")
+            console.print(f"  - {r}")
+    if result["extracted_iocs"]:
+        console.print(f"\n[bold]Extracted IOCs ({len(result['extracted_iocs'])}):[/bold]")
+        for i in result["extracted_iocs"]:
+            console.print(f"  - {i}")
 
 
 # ---------------------------------------------------------------------------
-# About
+# yara-scan
 # ---------------------------------------------------------------------------
-else:
-    st.header("About SOC Toolkit")
-    st.markdown(
-        """
-        **SOC Toolkit** is an all-in-one Python automation platform for
-        SOC / security analysts, combining:
 
-        - 🔍 **IOC Enrichment** — VirusTotal, AbuseIPDB, and Shodan lookups with a rolled-up risk verdict
-        - 📧 **Phishing Triage** — header-spoofing detection, IOC extraction, and attachment hashing from raw `.eml` files
-        - 🧬 **YARA Scanning** — file/endpoint malware pattern matching
-        - 📄 **Reporting** — JSON and styled HTML reports ready for tickets or SIEM ingestion
+@cli.command(name="yara-scan")
+@click.argument("target_path", type=click.Path(exists=True))
+@click.option("--rules", "rules_path", type=click.Path(exists=True), default=None, help="Custom rules file/dir")
+@click.option("--format", "fmt", type=click.Choice(["summary", "json", "html"]), default="summary")
+def yara_scan_cmd(target_path, rules_path, fmt):
+    """Scan a file or directory against YARA detection rules."""
+    result = yara_scan.scan(target_path, rules_path)
 
-        Available both as a **CLI** (`soc-toolkit --help`) and this dashboard.
+    if fmt == "json":
+        click.echo(json.dumps(result, indent=2, default=str))
+        return
+    if fmt == "html":
+        path = report.generate_report(result, "yara", fmt="html")
+        console.print(f"[green]HTML report saved:[/green] {path}")
+        return
 
-        See the project `README.md` for full setup and API key configuration.
-        """
-    )
+    console.print(f"\n[bold]Scanned:[/bold] {result['scanned_path']}")
+    console.print(f"[bold]Files scanned:[/bold] {result['total_files']}")
+    match_color = "red" if result["matches_found"] else "green"
+    console.print(f"[bold]Matches found:[/bold] [{match_color}]{result['matches_found']}[/{match_color}]\n")
+
+    for r in result["results"]:
+        if r["status"] == "match":
+            console.print(f"[red bold]MATCH[/red bold] {r['file']}")
+            for m in r["matches"]:
+                console.print(f"    rule: {m['rule']}  tags: {', '.join(m['tags'])}")
+
+
+# ---------------------------------------------------------------------------
+# dashboard
+# ---------------------------------------------------------------------------
+
+@cli.command()
+@click.option("--port", default=8501, help="Port to run the Streamlit dashboard on")
+def dashboard(port):
+    """Launch the web dashboard (Streamlit)."""
+    app_path = Path(__file__).parent / "dashboard" / "app.py"
+    console.print(f"[green]Launching dashboard on http://localhost:{port}[/green]")
+    subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path), "--server.port", str(port)])
+
+
+@cli.command()
+def cache_clear():
+    """Clear the local enrichment cache."""
+    from soc_toolkit.utils import cache
+    n = cache.clear()
+    console.print(f"[green]Cleared {n} cached entries.[/green]")
+
+
+def main():
+    cli()
+
+
+if __name__ == "__main__":
+    main()
+
