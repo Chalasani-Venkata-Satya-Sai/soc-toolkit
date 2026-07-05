@@ -45,14 +45,14 @@ textarea,
 input{
     background:#40E0D0 !important;
     color:#241426 !important;
-    border:1px solid #39FF14 !important;
+    border:1px solid #241426 !important;
     border-radius:12px !important;
 }
 
 /* Placeholder */
 
 textarea::placeholder{
-    color:#4ADE80 !important;
+    color:#241426 !important;
 }
 
 /* Buttons */
