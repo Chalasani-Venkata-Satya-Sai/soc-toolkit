@@ -65,6 +65,7 @@ def enrich(iocs, fmt, save):
                 str(r["risk_score"]),
                 ", ".join(s["source"] for s in r["sources"]) or "-",
             )
+
         console.print(table)
 
     if save and fmt != "html":
