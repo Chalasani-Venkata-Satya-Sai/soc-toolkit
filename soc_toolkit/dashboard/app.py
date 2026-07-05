@@ -21,7 +21,29 @@ from soc_toolkit.core import enrichment, phishing, report, yara_scan  # noqa: E4
 
 st.set_page_config(page_title="SOC Toolkit", page_icon="🛡️", layout="wide")
 
+# -----------------------------
+# Load custom CSS
+# -----------------------------
+
+CSS_DIR = Path(__file__).resolve().parents[1] / "styles"
+CSS_FILE = CSS_DIR / "style.css"
+# Some repos ship the CSS as `style.css.txt` (e.g., for GitHub/viewer friendliness)
+if not CSS_FILE.exists():
+    CSS_FILE = CSS_DIR / "style.css.txt"
+
+
+if CSS_FILE.exists():
+    with open(CSS_FILE, "r", encoding="utf-8") as f:
+        st.markdown(
+            f"<style>{f.read()}</style>",
+            unsafe_allow_html=True,
+        )
+
+
+
+
 VERDICT_COLORS = {
+
     "malicious": "🔴", "phishing": "🔴", "match": "🔴",
     "suspicious": "🟡",
     "clean": "🟢", "likely benign": "🟢",
@@ -196,3 +218,4 @@ else:
         See the project `README.md` for full setup and API key configuration.
         """
     )
+
