@@ -70,7 +70,6 @@ with st.sidebar:
     st.subheader("🛰️ Threat Intelligence Providers")
 
     sources = {
-    ...
     "OpenCTI": bool(settings.opencti_token),
         "VirusTotal": bool(settings.vt_api_key),
         "AbuseIPDB": bool(settings.abuseipdb_api_key),
