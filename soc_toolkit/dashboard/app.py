@@ -104,7 +104,6 @@ with st.sidebar:
     )
 
 
-    }
     for name, ok in sources.items():
         st.write(f"{'✅' if ok else '⬜'} {name}")
     if not any(sources.values()):
