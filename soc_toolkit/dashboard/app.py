@@ -64,11 +64,35 @@ with st.sidebar:
     page = st.radio("Module", ["IOC Enrichment", "Phishing Triage", "YARA Scan", "About"])
 
     st.divider()
-    st.subheader("API Key Status")
-    sources = {
-        "VirusTotal": bool(settings.vt_api_key),
-        "AbuseIPDB": bool(settings.abuseipdb_api_key),
-        "Shodan": bool(settings.shodan_api_key),
+    st.subheader("🛰️ Threat Intelligence Providers")
+
+sources = {
+    "VirusTotal": bool(settings.vt_api_key),
+    "AbuseIPDB": bool(settings.abuseipdb_api_key),
+    "Shodan": bool(settings.shodan_api_key),
+    "IBM X-Force": bool(settings.xforce_api_key),
+    "AlienVault OTX": bool(settings.otx_api_key),
+    "Pulsedive": bool(settings.pulsedive_api_key),
+    "Censys": bool(settings.censys_api_id),
+    "ZoomEye": bool(settings.zoomeye_api_key),
+    "Cisco Talos": bool(settings.talos_api_key),
+    "PhishTank": bool(settings.phishtank_api_key),
+    "Google Safe Browsing": bool(settings.gsb_api_key),
+    "URLScan": bool(settings.urlscan_api_key),
+    "URLHaus": bool(settings.urlhaus_api_key),
+    "Hybrid Analysis": bool(settings.hybrid_analysis_api_key),
+    "GreyNoise": bool(settings.greynoise_api_key),
+    "MISP": bool(settings.misp_api_key),
+    "OpenCTI": bool(settings.opencti_token),
+}
+
+for provider, enabled in sources.items():
+    status = "🟢" if enabled else "⚪"
+    st.markdown(f"{status} **{provider}**")
+
+enabled = sum(sources.values())
+st.divider()
+st.metric("Enabled Providers", f"{enabled}/{len(sources)}")
     }
     for name, ok in sources.items():
         st.write(f"{'✅' if ok else '⬜'} {name}")
