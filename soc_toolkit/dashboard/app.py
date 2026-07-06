@@ -60,7 +60,7 @@ def verdict_badge(verdict: str) -> str:
 
 with st.sidebar:
     st.title("🛡️ SOC Toolkit")
-    st.caption("Python automation for SOC / security analysts")
+    st.caption("Python Tool for SOC / security analysts")
     page = st.radio("Module", ["IOC Enrichment", "Phishing Triage", "YARA Scan", "About"])
 
     st.divider()
