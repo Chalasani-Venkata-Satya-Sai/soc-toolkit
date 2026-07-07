@@ -4,9 +4,11 @@ from soc_toolkit.core import enrichment
 
 
 def test_enrich_ioc_skips_when_no_api_keys():
+    # Ensure enabled_sources reports no providers during this test
     with patch.object(enrichment.settings, "vt_api_key", ""), \
          patch.object(enrichment.settings, "abuseipdb_api_key", ""), \
-         patch.object(enrichment.settings, "shodan_api_key", ""):
+         patch.object(enrichment.settings, "shodan_api_key", ""), \
+         patch.object(enrichment.settings, "enabled_sources", return_value=[]):
         result = enrichment.enrich_ioc("8.8.8.8")
 
     assert result["ioc"] == "8.8.8.8"

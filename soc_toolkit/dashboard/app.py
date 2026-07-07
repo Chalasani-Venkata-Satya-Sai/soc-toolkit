@@ -22,7 +22,19 @@ from soc_toolkit.config import settings  # noqa: E402
 from soc_toolkit.core import enrichment, phishing, report, yara_scan  # noqa: E402
 
 
-st.set_page_config(page_title="SOC Toolkit", page_icon="🛡️", layout="wide")
+st.set_page_config(
+    page_title="SOC Toolkit",
+    page_icon="🛡️",
+    layout="wide"
+)
+
+# Debug outputs to help troubleshoot API key loading in the dashboard UI
+st.write("VT API Loaded:", bool(settings.vt_api_key))
+st.write("VT API Length:", len(settings.vt_api_key))
+
+if settings.vt_api_key:
+    st.write("VT Prefix:", settings.vt_api_key[:8])
+
 
 # -----------------------------
 # Load custom CSS
