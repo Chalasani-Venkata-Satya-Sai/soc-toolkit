@@ -1,0 +1,6 @@
+﻿enh(enrichment): ensure IOC type short-circuits and preserve skipped-provider behavior
+
+Restore original behavior so indicators of unknown type short-circuit and providers without API keys
+return skipped results (avoiding network calls inside the check_* helpers). Tests rely on this behavior.
+
+Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>
