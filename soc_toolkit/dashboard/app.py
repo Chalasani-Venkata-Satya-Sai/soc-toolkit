@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import textwrap
 from pathlib import Path
 
 import pandas as pd
@@ -333,17 +334,19 @@ elif page == "YARA Scan":
 else:
     st.header("About SOC Toolkit")
     st.markdown(
-        """
-        **SOC Toolkit** is an all-in-one Python automation platform for
-        SOC / security analysts, combining:
+        textwrap.dedent(
+            """\
+            **SOC Toolkit** is an all-in-one Python automation platform for
+            SOC / security analysts, combining:
 
-        - 🔍 **IOC Enrichment** — VirusTotal, AbuseIPDB, and Shodan lookups with a rolled-up risk verdict
-        - 📧 **Phishing Triage** — header-spoofing detection, IOC extraction, and attachment hashing from raw `.eml` files
-        - 🧬 **YARA Scanning** — file/endpoint malware pattern matching
-        - 📄 **Reporting** — JSON and styled HTML reports ready for tickets or SIEM ingestion
+            - 🔍 **IOC Enrichment** — VirusTotal, AbuseIPDB, and Shodan lookups with a rolled-up risk verdict
+            - 📧 **Phishing Triage** — header-spoofing detection, IOC extraction, and attachment hashing from raw `.eml` files
+            - 🧬 **YARA Scanning** — file/endpoint malware pattern matching
+            - 📄 **Reporting** — JSON and styled HTML reports ready for tickets or SIEM ingestion
 
-        Available both as a **CLI** (`soc-toolkit --help`) and this dashboard.
+            Available both as a **CLI** (`soc-toolkit --help`) and this dashboard.
 
-        See the project `README.md` for full setup and API key configuration.
-        """
+            See the project `README.md` for full setup and API key configuration.
+            """
+        )
     )
