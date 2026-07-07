@@ -18,11 +18,27 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from soc_toolkit.config import settings  # noqa: E402
-from soc_toolkit.core import enrichment, phishing, report, yara_scan  # noqa: E402
+from soc_toolkit.config import settings
+from soc_toolkit.core import enrichment, phishing, report, yara_scan
 
+st.set_page_config(
+    page_title="SOC Toolkit",
+    page_icon="🛡️",
+    layout="wide"
+)
 
-st.set_page_config(page_title="SOC Toolkit", page_icon="🛡️", layout="wide")
+# ==========================
+# DEBUG
+# ==========================
+st.sidebar.divider()
+st.sidebar.subheader("Debug")
+
+st.sidebar.write("VT Loaded:", bool(settings.vt_api_key))
+st.sidebar.write("VT Length:", len(settings.vt_api_key))
+
+if settings.vt_api_key:
+    st.sidebar.write("VT Prefix:", settings.vt_api_key[:8])
+
 
 # -----------------------------
 # Load custom CSS
