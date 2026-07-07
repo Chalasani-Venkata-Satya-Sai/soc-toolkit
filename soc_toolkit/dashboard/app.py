@@ -186,72 +186,8 @@ if page == "IOC Enrichment":
         placeholder="8.8.8.8\nexample.com\n44d88612fea8a8f36de82e1278abb02f",
         height=120,
     )
-
-    if st.button("Enrich Indicators", type="primary") and raw_input.strip():
-        iocs = [line.strip() for line in raw_input.splitlines() if line.strip()]
-        with st.spinner(f"Querying threat-intel sources for {len(iocs)} indicator(s)..."):
-            results = enrichment.enrich_bulk(iocs)
-
-        st.session_state["last_enrichment"] = results
-
-       st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
-...
-if st.button("💾 Save HTML Report"):
-    ...
-        summary_rows = [
-            {
-                "IOC": r["ioc"],
-                "Type": r["type"],
-                "Verdict": r["verdict"].upper(),
-                "Risk Score": r["risk_score"],
-            }
-            for r in results
-        ]
-
-        st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
-
-        result = results[0]
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            metric_card("IOC", result["ioc"])
-
-        with col2:
-            metric_card("Type", str(result["type"]).upper())
-
-        with col3:
-            metric_card("Verdict", str(result["verdict"]).upper())
-
-        with col4:
-            metric_card("Risk Score", f"{result['risk_score']}/100")
-
-        st.divider()
-
-        for r in results:
-            with st.expander(
-                f"{verdict_badge(r['verdict'])} — {r['ioc']}",
-                expanded=True
-            ):
-
-                st.write(
-                    f"**Type:** {r['type']} | **Risk Score:** {r['risk_score']}/100"
-                )
-
-                if r["reasons"]:
-                    st.subheader("Reasons")
-                    for reason in r["reasons"]:
-                        st.write(f"- {reason}")
-
-                st.subheader("Threat Intelligence")
-
-                for s in r["sources"]:
-                    provider_card(s)
-
-        if st.button("💾 Save HTML Report"):
-            for r in results:
-                path = report.generate_report(r, "enrichment", fmt="html")
-                st.success(f"Saved: {path}")
+if st.button("Enrich Indicators", type="primary") and raw_input.strip():
+       elif page == "Phishing Triage":
 
 
 # ---------------------------------------------------------------------------
