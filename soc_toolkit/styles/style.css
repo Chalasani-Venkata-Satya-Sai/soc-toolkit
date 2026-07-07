@@ -1,145 +1,406 @@
-/* ===============================
-   SOC Toolkit - Matrix Theme
-================================= */
+/* =========================================================================
+   SOC Toolkit — Console Theme
+   A dark operations-console aesthetic modeled on real SIEM tooling
+   (Sentinel / QRadar / Splunk), not a "hacker matrix" cliché.
+   ========================================================================= */
 
-.stApp {
-    background: #40E0D0;
-    color: #40E0D0;
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+    --bg:            #0A0E14;
+    --surface:       #12161F;
+    --surface-raised:#171D2B;
+    --border:        #232A3B;
+    --text:          #E7EAF0;
+    --text-muted:    #8992A6;
+    --text-faint:    #5A6478;
+
+    --accent:        #4FA8FF;
+    --accent-soft:   rgba(79,168,255,.12);
+
+    --critical:      #F0546A;
+    --critical-soft: rgba(240,84,106,.14);
+    --warning:       #F5A623;
+    --warning-soft:  rgba(245,166,35,.14);
+    --clean:         #34D399;
+    --clean-soft:    rgba(52,211,153,.14);
+    --unknown:       #6B7688;
+    --unknown-soft:  rgba(107,118,136,.14);
+
+    --font-ui:   'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Sidebar */
+/* ---------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------- */
 
-section[data-testid="stSidebar"]{
-    background:#40E0D0;
-    border-right:1px solid #1B2336;
+.stApp{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-ui);
 }
 
-/* All text */
-
-html,
-body,
-p,
-span,
-label,
-small,
-div,
-li{
-    color:#241426 !important;
+html, body, p, span, label, small, li{
+    color:var(--text);
+    font-family:var(--font-ui);
 }
-
-/* Headers */
 
 h1,h2,h3,h4,h5,h6{
-    color:#241426 !important;
+    color:var(--text) !important;
+    font-family:var(--font-ui);
+    font-weight:600;
+    letter-spacing:-0.01em;
 }
-
-/* Links */
 
 a{
-    color:#00FF7F !important;
+    color:var(--accent) !important;
+    text-decoration:none;
+}
+a:hover{ text-decoration:underline; }
+
+/* Reduced motion respected */
+@media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
 }
 
-/* Text input */
+/* ---------------------------------------------------------------------
+   Sidebar
+--------------------------------------------------------------------- */
 
-textarea,
-input{
-    background:#40E0D0 !important;
-    color:#241426 !important;
-    border:1px solid #241426 !important;
-    border-radius:12px !important;
+section[data-testid="stSidebar"]{
+    background:var(--surface);
+    border-right:1px solid var(--border);
 }
 
-/* Placeholder */
-
-textarea::placeholder{
-    color:#241426 !important;
+section[data-testid="stSidebar"] .block-container{
+    padding-top:1.25rem;
 }
 
-/* Buttons */
+/* ---------------------------------------------------------------------
+   Status rail (signature element — see soc_toolkit/components/theme.py)
+--------------------------------------------------------------------- */
+
+.soc-status-rail{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:14px 20px;
+    margin-bottom:24px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+}
+
+.soc-status-rail-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.soc-status-dot{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--clean);
+    box-shadow:0 0 0 4px var(--clean-soft);
+    flex-shrink:0;
+}
+
+.soc-status-title{
+    font-family:var(--font-mono);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text);
+}
+
+.soc-status-sub{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+}
+
+.soc-status-rail-right{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    letter-spacing:0.02em;
+}
+
+/* ---------------------------------------------------------------------
+   Metric cards
+--------------------------------------------------------------------- */
+
+.soc-metric-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px 20px;
+    border-top:3px solid var(--card-accent, var(--accent));
+}
+
+.soc-metric-title{
+    color:var(--text-muted) !important;
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+}
+
+.soc-metric-value{
+    color:var(--text) !important;
+    font-family:var(--font-ui);
+    font-size:30px;
+    font-weight:700;
+    margin-top:6px;
+    line-height:1.2;
+}
+
+/* ---------------------------------------------------------------------
+   Provider status cards (per-source enrichment result)
+--------------------------------------------------------------------- */
+
+.soc-provider-card{
+    background:var(--surface-raised);
+    border:1px solid var(--border);
+    border-left:3px solid var(--card-accent, var(--unknown));
+    border-radius:8px;
+    padding:14px 16px;
+    margin-bottom:10px;
+}
+
+.soc-provider-name{
+    color:var(--text) !important;
+    font-family:var(--font-ui);
+    font-weight:600;
+    font-size:14px;
+    margin:0;
+}
+
+.soc-provider-status{
+    color:var(--text-muted) !important;
+    font-family:var(--font-mono);
+    font-size:12px;
+    margin-top:4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+}
+
+/* ---------------------------------------------------------------------
+   Verdict badges (pill)
+--------------------------------------------------------------------- */
+
+.soc-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:3px 10px;
+    border-radius:999px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    border:1px solid transparent;
+}
+
+.soc-badge-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+}
+
+.soc-badge-critical{ background:var(--critical-soft); color:var(--critical) !important; border-color:rgba(240,84,106,.3); }
+.soc-badge-critical .soc-badge-dot{ background:var(--critical); }
+
+.soc-badge-warning{ background:var(--warning-soft); color:var(--warning) !important; border-color:rgba(245,166,35,.3); }
+.soc-badge-warning .soc-badge-dot{ background:var(--warning); }
+
+.soc-badge-clean{ background:var(--clean-soft); color:var(--clean) !important; border-color:rgba(52,211,153,.3); }
+.soc-badge-clean .soc-badge-dot{ background:var(--clean); }
+
+.soc-badge-unknown{ background:var(--unknown-soft); color:var(--unknown) !important; border-color:rgba(107,118,136,.3); }
+.soc-badge-unknown .soc-badge-dot{ background:var(--unknown); }
+
+/* ---------------------------------------------------------------------
+   Provider grid (sidebar source list)
+--------------------------------------------------------------------- */
+
+.soc-source-grid{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.soc-source-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:5px 2px;
+    font-family:var(--font-mono);
+    font-size:12px;
+}
+
+.soc-source-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    flex-shrink:0;
+}
+
+.soc-source-on{ color:var(--text) !important; }
+.soc-source-on .soc-source-dot{ background:var(--clean); }
+
+.soc-source-off{ color:var(--text-faint) !important; }
+.soc-source-off .soc-source-dot{ background:var(--text-faint); }
+
+/* ---------------------------------------------------------------------
+   Inputs
+--------------------------------------------------------------------- */
+
+textarea, input, .stTextInput input, .stTextArea textarea{
+    background:var(--surface) !important;
+    color:var(--text) !important;
+    border:1px solid var(--border) !important;
+    border-radius:8px !important;
+    font-family:var(--font-mono) !important;
+}
+
+textarea:focus, input:focus{
+    border-color:var(--accent) !important;
+    box-shadow:0 0 0 1px var(--accent) !important;
+}
+
+textarea::placeholder, input::placeholder{
+    color:var(--text-faint) !important;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible{
+    outline:2px solid var(--accent) !important;
+    outline-offset:2px;
+}
+
+/* ---------------------------------------------------------------------
+   Buttons
+--------------------------------------------------------------------- */
 
 .stButton>button{
-
-    background:linear-gradient(
-        90deg,
-        #00A651,
-        #39FF14
-    );
-
-    color:black !important;
-
+    background:var(--accent);
+    color:#04101F !important;
     border:none;
-
-    border-radius:12px;
-
-    font-weight:700;
-
-    transition:0.3s;
+    border-radius:8px;
+    font-weight:600;
+    font-family:var(--font-ui);
+    padding:0.5rem 1.1rem;
+    transition:filter 0.15s ease, transform 0.15s ease;
 }
 
 .stButton>button:hover{
-
-    box-shadow:0 0 25px #39FF14;
-
-    transform:translateY(-2px);
-
+    filter:brightness(1.1);
+    transform:translateY(-1px);
 }
 
-/* Metric cards */
-
-div[data-testid="metric-container"]{
-
-    background:#40E0D0;
-
-    border:1px solid #39FF14;
-
-    border-radius:16px;
-
-    box-shadow:0 0 15px rgba(57,255,20,.15);
-
+.stButton>button:active{
+    transform:translateY(0);
 }
 
-/* Expander */
+/* Secondary / non-primary buttons stay on-brand but quieter */
+.stButton>button[kind="secondary"]{
+    background:var(--surface-raised);
+    color:var(--text) !important;
+    border:1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------------
+   Radio / segmented nav (sidebar module switch)
+--------------------------------------------------------------------- */
+
+div[role="radiogroup"] label{
+    font-family:var(--font-ui);
+    color:var(--text) !important;
+}
+
+/* ---------------------------------------------------------------------
+   Native st.metric (used on Phishing / YARA pages)
+--------------------------------------------------------------------- */
+
+div[data-testid="stMetric"]{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-top:3px solid var(--accent);
+    border-radius:12px;
+    padding:14px 18px;
+}
+
+div[data-testid="stMetricLabel"]{
+    font-family:var(--font-mono) !important;
+    font-size:11px !important;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-muted) !important;
+}
+
+div[data-testid="stMetricValue"]{
+    font-family:var(--font-ui) !important;
+    color:var(--text) !important;
+}
+
+/* ---------------------------------------------------------------------
+   Expander (per-IOC detail rows)
+--------------------------------------------------------------------- */
 
 .streamlit-expanderHeader{
-
-    color:#39FF14 !important;
-
+    color:var(--text) !important;
+    font-family:var(--font-ui) !important;
+    background:var(--surface) !important;
+    border:1px solid var(--border) !important;
+    border-radius:8px !important;
 }
 
-/* Tables */
+div[data-testid="stExpander"]{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+}
+
+/* ---------------------------------------------------------------------
+   Tables / dataframes
+--------------------------------------------------------------------- */
+
+div[data-testid="stDataFrame"]{
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+}
+
+thead, tbody{
+    font-family:var(--font-mono);
+    color:var(--text) !important;
+}
 
 thead{
-
-    color:#39FF14;
-
+    color:var(--text-muted) !important;
+    text-transform:uppercase;
+    font-size:11px;
+    letter-spacing:0.05em;
 }
 
-tbody{
+/* ---------------------------------------------------------------------
+   Alerts
+--------------------------------------------------------------------- */
 
-    color:#39FF14;
+.stSuccess{ border-left:3px solid var(--clean); background:var(--clean-soft); border-radius:8px; }
+.stWarning{ border-left:3px solid var(--warning); background:var(--warning-soft); border-radius:8px; }
+.stError{   border-left:3px solid var(--critical); background:var(--critical-soft); border-radius:8px; }
+.stInfo{    border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:8px; }
 
-}
+/* ---------------------------------------------------------------------
+   Dividers
+--------------------------------------------------------------------- */
 
-/* Success */
-
-.stSuccess{
-
-    border-left:5px solid #39FF14;
-
-}
-
-/* Warning */
-
-.stWarning{
-
-    border-left:5px solid orange;
-
-}
-
-/* Error */
-
-.stError{
-
-    border-left:5px solid red;
-
-}
+hr{ border-color:var(--border) !important; }
