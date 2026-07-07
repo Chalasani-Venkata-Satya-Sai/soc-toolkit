@@ -223,6 +223,20 @@ def enrich_ioc(ioc: str) -> Dict[str, Any]:
         sources.append(check_abuseipdb(ioc))
         sources.append(check_shodan(ioc))
 
+    # If no providers were actually enabled, the individual check_* helpers
+    # will return 'skipped' entries. However the user requested an early
+    # return when there are no enabled providers: return an explicit unknown
+    # verdict with empty sources to avoid even calling check_* helpers.
+    if not settings.enabled_sources():
+        log.warning("No threat-intel providers configured; returning unknown for %s", ioc)
+        return {
+            "ioc": ioc,
+            "type": ioc_type,
+            "sources": [],
+            "risk_score": 0,
+            "verdict": "unknown",
+        }
+
     verdict = _compute_verdict(sources)
 
     return {

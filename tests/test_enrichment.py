@@ -11,8 +11,8 @@ def test_enrich_ioc_skips_when_no_api_keys():
 
     assert result["ioc"] == "8.8.8.8"
     assert result["type"] == "ipv4"
-    statuses = {s["status"] for s in result["sources"]}
-    assert statuses == {"skipped"}
+    # With early return when no providers are enabled, sources should be empty
+    assert result["sources"] == []
     assert result["verdict"] == "unknown"
 
 
