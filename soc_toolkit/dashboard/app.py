@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from soc_toolkit.components.cards import metric_card, provider_card
+from soc_toolkit.components.theme import metric_card, provider_card
 
 # Allow running this file directly with `streamlit run`
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -186,8 +186,61 @@ if page == "IOC Enrichment":
         placeholder="8.8.8.8\nexample.com\n44d88612fea8a8f36de82e1278abb02f",
         height=120,
     )
-if st.button("Enrich Indicators", type="primary") and raw_input.strip():
-       elif page == "Phishing Triage":
+
+    if st.button("Enrich Indicators", type="primary") and raw_input.strip():
+        indicators = [line.strip() for line in raw_input.splitlines() if line.strip()]
+
+        with st.spinner(f"Enriching {len(indicators)} indicator(s)..."):
+            results = enrichment.enrich_bulk(indicators)
+
+        st.session_state["last_enrichment"] = results
+
+        malicious_count = sum(1 for r in results if r["verdict"] in ("malicious", "phishing", "match"))
+        suspicious_count = sum(1 for r in results if r["verdict"] == "suspicious")
+        clean_count = sum(1 for r in results if r["verdict"] == "clean")
+        unknown_count = len(results) - malicious_count - suspicious_count - clean_count
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            metric_card("Total Indicators", len(results))
+        with col2:
+            metric_card("Malicious", malicious_count, color="#ff4b4b")
+        with col3:
+            metric_card("Suspicious", suspicious_count, color="#f5c518")
+        with col4:
+            metric_card("Clean / Unknown", clean_count + unknown_count, color="#00ff41")
+
+        st.subheader("Summary")
+        summary_rows = [
+            {
+                "IOC": r["ioc"],
+                "Type": r["type"],
+                "Verdict": r["verdict"],
+                "Risk Score": r["risk_score"],
+            }
+            for r in results
+        ]
+        st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+
+        st.subheader("Details")
+        for r in results:
+            with st.expander(f"{verdict_badge(r['verdict'])} — {r['ioc']}"):
+                for reason in r.get("reasons", []):
+                    st.write(f"- {reason}")
+
+                for src in r.get("sources", []):
+                    status = src.get("status", "unknown")
+                    color = "#00ff41" if status == "ok" else "#8f9bb3"
+                    provider_card(src.get("source", "unknown").title(), status, color)
+                    extra = {k: v for k, v in src.items() if k not in ("source", "status")}
+                    if extra:
+                        st.json(extra)
+
+        if st.button("💾 Save HTML Report"):
+            saved_paths = [
+                report.generate_report(r, "enrichment", fmt="html") for r in results
+            ]
+            st.success("Saved: " + ", ".join(str(p) for p in saved_paths))
 
 
 # ---------------------------------------------------------------------------
@@ -293,4 +346,3 @@ else:
         See the project `README.md` for full setup and API key configuration.
         """
     )
-
