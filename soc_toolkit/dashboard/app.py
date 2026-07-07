@@ -105,6 +105,53 @@ with st.sidebar:
 
     for name, ok in sources.items():
         st.write(f"{'✅' if ok else '⬜'} {name}")
+
+    # Provide a one-click validation tool to diagnose bad/invalid API keys.
+    if st.button("Validate API keys"):
+        st.info("Validating configured API keys...")
+        checks: list[tuple[str, dict]] = []
+
+        # VirusTotal (domain check)
+        if settings.vt_api_key:
+            try:
+                vt_res = enrichment.check_virustotal("example.com", enrichment.IOCType.DOMAIN)
+            except Exception as exc:  # pragma: no cover - defensive
+                vt_res = {"source": "virustotal", "status": "error", "reason": str(exc)}
+            checks.append(("VirusTotal", vt_res))
+        else:
+            checks.append(("VirusTotal", {"status": "skipped", "reason": "no API key"}))
+
+        # AbuseIPDB (IP check)
+        if settings.abuseipdb_api_key:
+            try:
+                abuse_res = enrichment.check_abuseipdb("8.8.8.8")
+            except Exception as exc:  # pragma: no cover - defensive
+                abuse_res = {"source": "abuseipdb", "status": "error", "reason": str(exc)}
+            checks.append(("AbuseIPDB", abuse_res))
+        else:
+            checks.append(("AbuseIPDB", {"status": "skipped", "reason": "no API key"}))
+
+        # Shodan (IP check)
+        if settings.shodan_api_key:
+            try:
+                shodan_res = enrichment.check_shodan("8.8.8.8")
+            except Exception as exc:  # pragma: no cover - defensive
+                shodan_res = {"source": "shodan", "status": "error", "reason": str(exc)}
+            checks.append(("Shodan", shodan_res))
+        else:
+            checks.append(("Shodan", {"status": "skipped", "reason": "no API key"}))
+
+        # Display results
+        for name, res in checks:
+            status = res.get("status")
+            reason = res.get("reason", "")
+            if status == "ok":
+                st.success(f"{name}: OK")
+            elif status == "skipped":
+                st.warning(f"{name}: no API key configured")
+            else:
+                st.error(f"{name}: {reason}")
+
     if not any(sources.values()):
         st.warning("No API keys configured. Add them to `.env` (see `.env.example`).")
 
@@ -143,7 +190,12 @@ if page == "IOC Enrichment":
                     for reason in r["reasons"]:
                         st.write(f"- {reason}")
                 for s in r["sources"]:
-                    st.json(s)
+                    # Highlight authentication errors with a helpful message
+                    if s.get("status") == "error" and "invalid" in s.get("reason", "").lower():
+                        st.error(f"{s.get('source')}: Invalid API key or authentication failed. Check your `.env` and restart the app.")
+                        st.json(s)
+                    else:
+                        st.json(s)
 
         if st.button("💾 Save HTML Report"):
             for r in results:
