@@ -13,13 +13,14 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from soc_toolkit.components.theme import metric_card, provider_card
-
-# Allow running this file directly with `streamlit run`
+# Allow running this file directly with `streamlit run` — this MUST happen
+# before any `soc_toolkit.*` imports below, since Streamlit puts this
+# script's own directory on sys.path, not the project root.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from soc_toolkit.components.theme import metric_card, provider_card
 from soc_toolkit.config import settings
 from soc_toolkit.core import enrichment, phishing, report, yara_scan
 
