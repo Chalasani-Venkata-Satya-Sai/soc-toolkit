@@ -194,12 +194,21 @@ if page == "IOC Enrichment":
 
         st.session_state["last_enrichment"] = results
 
-        summary_rows = [
-            {"IOC": r["ioc"], "Type": r["type"], "Verdict": r["verdict"], "Risk Score": r["risk_score"]}
-            for r in results
-        ]
         st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+           col1, col2, col3, col4 = st.columns(4)
 
+with col1:
+    metric_card("IOC", results[0]["ioc"])
+
+with col2:
+    metric_card("Type", results[0]["type"])
+
+with col3:
+    metric_card("Verdict", results[0]["verdict"].upper())
+
+with col4:
+    metric_card("Risk Score", f"{results[0]['risk_score']}/100")
+       
         for r in results:
             with st.expander(f"{verdict_badge(r['verdict'])} — {r['ioc']}"):
                 st.write(f"**Type:** {r['type']}  |  **Risk score:** {r['risk_score']}/100")
