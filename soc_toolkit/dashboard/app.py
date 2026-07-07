@@ -21,31 +21,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from soc_toolkit.components.theme import metric_card, provider_card
+from soc_toolkit.components.theme import (
+    metric_card,
+    provider_card,
+    severity_of,
+    source_row,
+    status_rail,
+    verdict_badge,
+)
 from soc_toolkit.config import settings
 from soc_toolkit.core import enrichment, phishing, report, yara_scan
 
 st.set_page_config(
     page_title="SOC Toolkit",
     page_icon="🛡️",
-    layout="wide"
+    layout="wide",
 )
 
-# ==========================
-# DEBUG
-# ==========================
-st.sidebar.divider()
-st.sidebar.subheader("Debug")
-
-st.sidebar.write("VT Loaded:", bool(settings.vt_api_key))
-st.sidebar.write("VT Length:", len(settings.vt_api_key))
-
-if settings.vt_api_key:
-    st.sidebar.write("VT Prefix:", settings.vt_api_key[:8])
-
-
 # -----------------------------
-# Load custom CSS
+# Load custom CSS (must run before any other st.* rendering below)
 # -----------------------------
 
 CSS_DIR = Path(__file__).resolve().parents[1] / "styles"
@@ -54,43 +48,46 @@ CSS_FILE = CSS_DIR / "style.css"
 if not CSS_FILE.exists():
     CSS_FILE = CSS_DIR / "style.css.txt"
 
-
 if CSS_FILE.exists():
     with open(CSS_FILE, "r", encoding="utf-8") as f:
-        st.markdown(
-            f"<style>{f.read()}</style>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
 
 
-VERDICT_COLORS = {
-
-    "malicious": "🔴", "phishing": "🔴", "match": "🔴",
-    "suspicious": "🟡",
-    "clean": "🟢", "likely benign": "🟢",
-    "unknown": "⚪", "unrecognized": "⚪",
-}
+EMOJI_BY_SEVERITY = {"critical": "🔴", "warning": "🟡", "clean": "🟢", "unknown": "⚪"}
 
 
-def verdict_badge(verdict: str) -> str:
-    return f"{VERDICT_COLORS.get(verdict, '⚪')} **{verdict.upper()}**"
+def verdict_label(verdict: str) -> str:
+    """Plain-text verdict label for contexts that can't render HTML
+    (e.g. st.expander headers, which only accept plain text/markdown-lite)."""
+    css_class, _ = severity_of(verdict)
+    emoji = EMOJI_BY_SEVERITY.get(css_class, "⚪")
+    return f"{emoji} {(verdict or 'unknown').upper()}"
 
 
 with st.sidebar:
-    st.title("🛡️ SOC Toolkit")
-    st.caption("Python Tool for SOC / security analysts")
+    st.markdown(
+        '<div style="font-family:var(--font-ui);font-weight:700;font-size:20px;">'
+        '🛡️ SOC Toolkit</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption("Automation toolkit for SOC / security analysts")
     page = st.radio(
         "Module",
-        ["IOC Enrichment", "Phishing Triage", "YARA Scan", "About"]
+        ["IOC Enrichment", "Phishing Triage", "YARA Scan", "About"],
+        label_visibility="collapsed",
     )
 
     st.divider()
-    st.subheader("🛰️ Threat Intelligence Providers")
+    st.markdown(
+        '<div class="soc-status-title" style="margin-bottom:8px;">'
+        '🛰️ THREAT INTEL PROVIDERS</div>',
+        unsafe_allow_html=True,
+    )
 
     sources = {
-    "OpenCTI": bool(settings.opencti_token),
+        "OpenCTI": bool(settings.opencti_token),
         "VirusTotal": bool(settings.vt_api_key),
         "AbuseIPDB": bool(settings.abuseipdb_api_key),
         "Shodan": bool(settings.shodan_api_key),
@@ -107,24 +104,17 @@ with st.sidebar:
         "Hybrid Analysis": bool(settings.hybrid_analysis_api_key),
         "GreyNoise": bool(settings.greynoise_api_key),
         "MISP": bool(settings.misp_api_key),
-        "OpenCTI": bool(settings.opencti_token),
     }
 
-    for provider, enabled in sources.items():
-        status = "🟢" if enabled else "⚪"
-        st.markdown(f"{status} **{provider}**")
+    grid_html = '<div class="soc-source-grid">' + "".join(
+        source_row(name, ok) for name, ok in sources.items()
+    ) + "</div>"
+    st.markdown(grid_html, unsafe_allow_html=True)
 
     enabled = sum(sources.values())
 
     st.divider()
-    st.metric(
-        "Enabled Providers",
-        f"{enabled}/{len(sources)}"
-    )
-
-
-    for name, ok in sources.items():
-        st.write(f"{'✅' if ok else '⬜'} {name}")
+    st.metric("Enabled Providers", f"{enabled}/{len(sources)}")
 
     # Provide a one-click validation tool to diagnose bad/invalid API keys.
     if st.button("Validate API keys"):
@@ -175,6 +165,18 @@ with st.sidebar:
     if not any(sources.values()):
         st.warning("No API keys configured. Add them to `.env` (see `.env.example`).")
 
+# ---------------------------------------------------------------------------
+# Status rail — signature element shown at the top of every page
+# ---------------------------------------------------------------------------
+_provider_count = sum(sources.values())
+status_rail(
+    title="SOC TOOLKIT",
+    subtitle=page,
+    right_text=f"{_provider_count}/{len(sources)} SOURCES ONLINE",
+    healthy=_provider_count > 0,
+)
+
+
 
 # ---------------------------------------------------------------------------
 # IOC Enrichment
@@ -204,13 +206,13 @@ if page == "IOC Enrichment":
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            metric_card("Total Indicators", len(results))
+            metric_card("Total Indicators", len(results), color="#4FA8FF")
         with col2:
-            metric_card("Malicious", malicious_count, color="#ff4b4b")
+            metric_card("Malicious", malicious_count, color="#F0546A")
         with col3:
-            metric_card("Suspicious", suspicious_count, color="#f5c518")
+            metric_card("Suspicious", suspicious_count, color="#F5A623")
         with col4:
-            metric_card("Clean / Unknown", clean_count + unknown_count, color="#00ff41")
+            metric_card("Clean / Unknown", clean_count + unknown_count, color="#34D399")
 
         st.subheader("Summary")
         summary_rows = [
@@ -222,18 +224,20 @@ if page == "IOC Enrichment":
             }
             for r in results
         ]
-        st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+        st.dataframe(pd.DataFrame(summary_rows), width='stretch')
 
         st.subheader("Details")
         for r in results:
-            with st.expander(f"{verdict_badge(r['verdict'])} — {r['ioc']}"):
+            # st.expander labels are plain text, not HTML — use the emoji
+            # variant here; the HTML pill badge is used inside the body below.
+            with st.expander(f"{verdict_label(r['verdict'])} — {r['ioc']}"):
+                st.markdown(verdict_badge(r["verdict"]), unsafe_allow_html=True)
                 for reason in r.get("reasons", []):
                     st.write(f"- {reason}")
 
                 for src in r.get("sources", []):
                     status = src.get("status", "unknown")
-                    color = "#00ff41" if status == "ok" else "#8f9bb3"
-                    provider_card(src.get("source", "unknown").title(), status, color)
+                    provider_card(src.get("source", "unknown").title(), status)
                     extra = {k: v for k, v in src.items() if k not in ("source", "status")}
                     if extra:
                         st.json(extra)
@@ -268,8 +272,12 @@ elif page == "Phishing Triage":
         st.session_state["last_phishing"] = result
 
         col1, col2 = st.columns(2)
-        col1.metric("Verdict", result["verdict"].upper())
-        col2.metric("Score", f"{result['score']}/100")
+        with col1:
+            metric_card("Verdict", result["verdict"].upper(), verdict=result["verdict"])
+        with col2:
+            metric_card("Score", f"{result['score']}/100", color="#4FA8FF")
+
+        st.markdown(verdict_badge(result["verdict"]), unsafe_allow_html=True)
 
         st.subheader("Headers")
         st.json(result["headers"])
@@ -279,7 +287,7 @@ elif page == "Phishing Triage":
 
         st.subheader(f"Attachments ({len(result['attachments'])})")
         if result["attachments"]:
-            st.dataframe(pd.DataFrame(result["attachments"]), use_container_width=True)
+            st.dataframe(pd.DataFrame(result["attachments"]), width='stretch')
         else:
             st.write("None found.")
 
