@@ -194,35 +194,59 @@ if page == "IOC Enrichment":
 
         st.session_state["last_enrichment"] = results
 
+       st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+...
+if st.button("💾 Save HTML Report"):
+    ...
+        summary_rows = [
+            {
+                "IOC": r["ioc"],
+                "Type": r["type"],
+                "Verdict": r["verdict"].upper(),
+                "Risk Score": r["risk_score"],
+            }
+            for r in results
+        ]
+
         st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
-           col1, col2, col3, col4 = st.columns(4)
 
-with col1:
-    metric_card("IOC", results[0]["ioc"])
+        result = results[0]
 
-with col2:
-    metric_card("Type", results[0]["type"])
+        col1, col2, col3, col4 = st.columns(4)
 
-with col3:
-    metric_card("Verdict", results[0]["verdict"].upper())
+        with col1:
+            metric_card("IOC", result["ioc"])
 
-with col4:
-    metric_card("Risk Score", f"{results[0]['risk_score']}/100")
-       
+        with col2:
+            metric_card("Type", str(result["type"]).upper())
+
+        with col3:
+            metric_card("Verdict", str(result["verdict"]).upper())
+
+        with col4:
+            metric_card("Risk Score", f"{result['risk_score']}/100")
+
+        st.divider()
+
         for r in results:
-            with st.expander(f"{verdict_badge(r['verdict'])} — {r['ioc']}"):
-                st.write(f"**Type:** {r['type']}  |  **Risk score:** {r['risk_score']}/100")
+            with st.expander(
+                f"{verdict_badge(r['verdict'])} — {r['ioc']}",
+                expanded=True
+            ):
+
+                st.write(
+                    f"**Type:** {r['type']} | **Risk Score:** {r['risk_score']}/100"
+                )
+
                 if r["reasons"]:
-                    st.write("**Reasons:**")
+                    st.subheader("Reasons")
                     for reason in r["reasons"]:
                         st.write(f"- {reason}")
+
+                st.subheader("Threat Intelligence")
+
                 for s in r["sources"]:
-                    # Highlight authentication errors with a helpful message
-                    if s.get("status") == "error" and "invalid" in s.get("reason", "").lower():
-                        st.error(f"{s.get('source')}: Invalid API key or authentication failed. Check your `.env` and restart the app.")
-                        st.json(s)
-                    else:
-                        st.json(s)
+                    provider_card(s)
 
         if st.button("💾 Save HTML Report"):
             for r in results:
